@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      all:
+        patterns:
+        - "*"
+  - package-ecosystem: uv
+    cooldown:
+      default-days: 7
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      all:
+        patterns:
+        - "*"

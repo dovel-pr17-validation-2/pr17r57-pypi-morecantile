@@ -1,0 +1,56 @@
+name: Benchmark
+
+on:
+  push:
+    branches:
+    - main
+    tags:
+    - '*'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  LATEST_PY_VERSION: '3.14'
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.9.*" 
+          enable-cache: false
+          python-version: ${{ env.LATEST_PY_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          uv sync --group benchmark --frozen
+
+      - name: Run Benchmark
+        run: |
+          uv run pytest tests/benchmarks.py --benchmark-only --benchmark-columns 'min, max, mean, median' --benchmark-sort 'min' --benchmark-json output.json
+
+      - name: Store and Compare benchmark result
+        uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1
+        with:
+          name: morecantile Benchmarks
+          tool: 'pytest'
+          output-file-path: output.json
+          alert-threshold: '150%'
+          # PR tokens from Dependabot and forks are read-only: on PRs, report in the job summary instead of commenting
+          comment-on-alert: ${{ github.event_name != 'pull_request' }}
+          summary-always: ${{ github.event_name == 'pull_request' }}
+          fail-on-alert: false
+          # GitHub API token to make a commit comment
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: 'gh-benchmarks'
+          # Make a commit on `gh-pages` only if main
+          auto-push: ${{ github.ref == 'refs/heads/main' }}
+          benchmark-data-dir-path: dev/benchmarks
